@@ -1,7 +1,7 @@
 # aws_iam_role
 
 resource "aws_iam_role" "worker" {
-  name = var.name
+  name = format("%s-worker", var.bucket_name_prefix)
 
   assume_role_policy = <<POLICY
 {
@@ -21,7 +21,7 @@ POLICY
 }
 
 resource "aws_iam_instance_profile" "worker" {
-  name = var.name
+  name = format("%s-worker", var.bucket_name_prefix)
   role = aws_iam_role.worker.name
 }
 

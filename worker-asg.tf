@@ -1,7 +1,7 @@
 # aws_autoscaling_group
 
 resource "aws_autoscaling_group" "worker" {
-  name_prefix = format("%s-", var.name)
+  name_prefix = format("%s-worker", var.bucket_name_prefix)
 
   min_size = var.min
   max_size = var.max
