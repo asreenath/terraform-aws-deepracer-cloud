@@ -58,5 +58,5 @@ unzip awscliv2.zip
 runuser -l ubuntu -c "aws configure set default.region ${region}"
 runuser -l ubuntu -c "aws configure set default.output json"
 
-runuser -l ubuntu -c "curl -fsSL -o ~/run.sh https://raw.githubusercontent.com/nalbam/terraform-aws-deepracer-cloud/main/bin/run.sh"
+runuser -l ubuntu -c "curl -fsSL -o ~/run.sh https://raw.githubusercontent.com/asreenath/terraform-aws-deepracer-cloud/main/bin/run.sh"
 runuser -l ubuntu -c "bash ~/run.sh init"

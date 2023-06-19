@@ -1,80 +1,50 @@
-# terraform-aws-deepracer-cloud
+# AWS Deepracer using Terraform
 
-* <https://github.com/aws-deepracer-community/deepracer-for-cloud>
+This code is inspired from [aws-deepracer-cloud](https://github.com/aws-deepracer-community/deepracer-for-cloud) and [terraform-aws-deepracer-cloud](https://github.com/nalbam/terraform-aws-deepracer-cloud)
 
-## clone
+Features -
+<ul>
+<li> Creates required infra using Terraform Cloud using remote backend</li>
+<li> Can support multiple environments/runs using inputs from .tfvars files </li>
+<li> Creates required infrastructure using Terraform </li>
+<li> Supports multiple parallel runs of Deepracer on EC2 </li>
+<li> Runs DeepRacer on EC2 Spot instances, making it most cost effective </li>
+</ul>
 
-```bash
-git clone https://github.com/nalbam/terraform-aws-deepracer-cloud
-```
+# Pre-requisites
 
-## config
+1. Create free tier [AWS Cloud account](https://aws.amazon.com/free/) 
+2. Create free [Terraform Cloud account](https://app.terraform.io/)
+3. Create an AWS User or AWS Assumable Role with appropriate permissions for terraform to be able to provision infrastructure
+4. Install awscli, terraform cli and other required tool chain in your laptop/desktop
+5. Using Terraform Cloud console UI, create and organizaiton and workspace
 
-> Save the environment variable json in AWS SSM.
+# Execution Steps
 
-```bash
-aws configure set default.region us-east-1
-aws configure set default.output json
+1. Clone the github code `git clone https://github.com/asreenath/terraform-aws-deepracer-cloud`
+2. Use awscli to login to AWS , copy those credentials to `provider.tf` for access_key, secret_key and optionally token
+3. Use terraform cli to login to Terraform using `terraform init` and follow the prompts to setup the terraform cli tp use your required organizaiton
+3. Update the model files in `custom_files` directory
+4. Update the `.tfvars` (ex:- local.tfvars) with appropriate inputs
+5. Update the terraform 
+6. Run `terraform plan --var-file=local.tfvars` to verify the changes to your infrastructure using appropriate environment file (ex:- local.tfvars)
+7. Run `terraform apply --var-file=local.tfvars` to apply the changes to your infrastructure using appropriate environment file (ex:- local.tfvars)
+8. Note the outputs to refer to your training/evaluation artifacts
 
-export DR_WORLD_NAME="2022_reinvent_champ"
-export DR_MODEL_BASE="DR-22-CHAMP-A-1"
+# Operations
 
-# put aws ssm parameter store
-aws ssm put-parameter --name "/dr-cloud/world_name" --value "${DR_WORLD_NAME}" --type SecureString --overwrite | jq .
-aws ssm put-parameter --name "/dr-cloud/model_base" --value "${DR_MODEL_BASE}" --type SecureString --overwrite | jq .
+## New Run
+1. To run multiple parallel runs that may use different different model inputs (hyperparameters/reward function etc) , the easiest way is to use multiple terraform workspaces, and use the `Execution Steps` mentioned above. Do not forget to create a separate `.tfvars` file for that run
+2. IMPORTANT inputs to modify in `.tfvars` file are `bucket_name_prefix`, `dr_world_name`, `dr_model_base_name` and `ssm_parameter_name_prefix`
+3. IMPORTANT to update your `custom_files` directory as required for the new run
 
-# # get aws ssm parameter store
-# aws ssm get-parameter --name "/dr-cloud/world_name" --with-decryption | jq .Parameter.Value -r
-# aws ssm get-parameter --name "/dr-cloud/model_base" --with-decryption | jq .Parameter.Value -r
-```
+## Shut Down EC2 instance
+1. Run `terraform apply --var-file=local.tfvars --desired=0` to set the AutoScalingGroup desired capacity value to zero
 
-## replace
+## Tear down infrastructure
+1. Run `terraform destroy --var-file=local.tfvars` to apply the changes to your infrastructure using appropriate environment file (ex:- local.tfvars)
 
-> Create bucket and dynamodb for Terraform backend.
+# Known Issues
 
-```bash
-./replace.sh
-
-# ACCOUNT_ID = 123456789012
-# REGION = us-east-1
-# BUCKET = terraform-workshop-123456789012
-```
-
-## terraform apply
-
-> Create a Spot Instance with AutoscalingGroup.
-
-```bash
-# start
-terraform apply
-
-# ...
-
-Outputs:
-
-bucket_local = "aws-deepracer-123456789012-local"
-bucket_upload = "aws-deepracer-123456789012-upload"
-public_ip = "54.69.00.00"
-
-# stop
-terraform apply -var desired=0
-```
-
-## new model
-
-```bash
-aws configure set default.region us-east-1
-aws configure set default.output json
-
-export ACCOUNT_ID=$(aws sts get-caller-identity | jq .Account -r)
-
-export DR_S3_BUCKET="aws-deepracer-${ACCOUNT_ID}-local"
-
-export DR_WORLD_NAME="2022_reinvent_champ"
-export DR_MODEL_BASE="DR-22-CHAMP-B-1" # new model
-
-aws ssm put-parameter --name "/dr-cloud/world_name" --value "${DR_WORLD_NAME}" --type SecureString --overwrite | jq .
-aws ssm put-parameter --name "/dr-cloud/model_base" --value "${DR_MODEL_BASE}" --type SecureString --overwrite | jq .
-
-aws s3 sync --exact-timestamps ./${DR_WORLD_NAME}/ s3://${DR_S3_BUCKET}/${DR_WORLD_NAME}/
-```
+1. Terraform unable to assume a role to connect to AWS either with profile or not
+2. Terraform unable to use AWS credentials file
