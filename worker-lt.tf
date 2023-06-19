@@ -1,7 +1,7 @@
 # aws_launch_template
 
 resource "aws_launch_template" "worker" {
-  name_prefix = format("%s-", var.name)
+  name_prefix = format("%s-worker", var.bucket_name_prefix)
 
   image_id = local.ami_id
 
