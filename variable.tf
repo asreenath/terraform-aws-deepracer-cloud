@@ -133,5 +133,5 @@ variable "dr_model_base_name" {
 
 variable "dr_track_direction" {
   type    = string
-  default = ""
+  default = "CL" # Valid values CW (for counter clockwise direction or reverse direction), CL (default made up value)
 }

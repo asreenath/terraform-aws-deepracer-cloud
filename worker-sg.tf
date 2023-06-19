@@ -1,7 +1,7 @@
 # aws_security_group
 
 resource "aws_security_group" "worker" {
-  name = format("%s-worker", var.name)
+  name = format("%s-worker", var.bucket_name_prefix)
 
   vpc_id = local.vpc_id
 
