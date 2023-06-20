@@ -137,8 +137,9 @@ _autorun() {
   DR_AWS_APP_REGION="$(aws configure get default.region)"
   DR_LOCAL_S3_PROFILE="default"
   DR_UPLOAD_S3_PROFILE="default"
-  DR_LOCAL_S3_BUCKET="aws-deepracer-${ACCOUNT_ID}-train"
-  DR_UPLOAD_S3_BUCKET="aws-deepracer-${ACCOUNT_ID}-eval"
+  DR_S3_BUCKET_PREFIX=$(aws ssm get-parameter --name "${DR_SSM_PARAMETER_PREFIX}/s3_bucket_name_prefix" --with-decryption | jq .Parameter.Value -r)
+  DR_LOCAL_S3_BUCKET="${DR_S3_BUCKET_PREFIX}-${ACCOUNT_ID}-train"
+  DR_UPLOAD_S3_BUCKET="${DR_S3_BUCKET_PREFIX}-${ACCOUNT_ID}-eval"
   DR_DOCKER_STYLE="compose"
   DR_SAGEMAKER_IMAGE="${SAGEMAKER}-gpu"
   DR_ROBOMAKER_IMAGE="${ROBOMAKER}-cpu-avx2" # 5.0.1-gpu-gl
