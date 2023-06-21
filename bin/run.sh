@@ -86,31 +86,33 @@ _autorun() {
   echo "DR_MODEL_BASE: ${DR_MODEL_BASE}"
   echo "DR_DIRECTION: ${DR_DIRECTION}"
 
-
   # download
   aws s3 sync s3://${DR_S3_BUCKET}/${DR_WORLD_NAME}/ ./custom_files/
 
   # run.env
-  PREV_MODEL_BASE=$(grep -e '^DR_MODEL_BASE=' ./custom_files/run.env | cut -d'=' -f2 | tail -n 1)
-  PREV_MODEL_NAME=$(grep -e '^DR_LOCAL_S3_MODEL_PREFIX=' ./custom_files/run.env | cut -d'=' -f2 | tail -n 1)
+  sed -i "s/\(^DR_WORLD_NAME=\)\(.*\)/\1$DR_WORLD_NAME/" run.env
+  sed -i "s/\(^DR_LOCAL_S3_MODEL_PREFIX=\)\(.*\)/\1$DR_MODEL_BASE/" run.env  
 
-  if [ "${PREV_MODEL_BASE}" != "${DR_MODEL_BASE}" ]; then
-    # new model
-    echo "[${PREV_MODEL_BASE}] -> [${DR_MODEL_BASE}] new"
+  # PREV_MODEL_BASE=$(grep -e '^DR_MODEL_BASE=' ./custom_files/run.env | cut -d'=' -f2 | tail -n 1)
+  # PREV_MODEL_NAME=$(grep -e '^DR_LOCAL_S3_MODEL_PREFIX=' ./custom_files/run.env | cut -d'=' -f2 | tail -n 1)
 
-    sed -i "s/\(^DR_WORLD_NAME=\)\(.*\)/\1$DR_WORLD_NAME/" run.env
-    sed -i "s/\(^DR_LOCAL_S3_MODEL_PREFIX=\)\(.*\)/\1$DR_MODEL_BASE/" run.env
-    sed -i "s/\(^DR_LOCAL_S3_PRETRAINED=\)\(.*\)/\1False/" run.env
-  else
-    # clone model
-    echo "[${PREV_MODEL_NAME}] clone"
+  # if [ "${PREV_MODEL_BASE}" != "${DR_MODEL_BASE}" ]; then
+  #   # new model
+  #   echo "[${PREV_MODEL_BASE}] -> [${DR_MODEL_BASE}] new"
 
-    sed -i "s/\(^DR_WORLD_NAME=\)\(.*\)/\1$DR_WORLD_NAME/" run.env
-    sed -i "s/\(^DR_LOCAL_S3_MODEL_PREFIX=\)\(.*\)/\1$PREV_MODEL_NAME/" run.env
-    sed -i "s/\(^DR_LOCAL_S3_PRETRAINED_CHECKPOINT=\)\(.*\)/\1best/" run.env
+  #   sed -i "s/\(^DR_WORLD_NAME=\)\(.*\)/\1$DR_WORLD_NAME/" run.env
+  #   sed -i "s/\(^DR_LOCAL_S3_MODEL_PREFIX=\)\(.*\)/\1$DR_MODEL_BASE/" run.env
+  #   sed -i "s/\(^DR_LOCAL_S3_PRETRAINED=\)\(.*\)/\1False/" run.env
+  # else
+  #   # clone model
+  #   echo "[${PREV_MODEL_NAME}] clone"
 
-    dr-increment-training -f
-  fi
+  #   sed -i "s/\(^DR_WORLD_NAME=\)\(.*\)/\1$DR_WORLD_NAME/" run.env
+  #   sed -i "s/\(^DR_LOCAL_S3_MODEL_PREFIX=\)\(.*\)/\1$PREV_MODEL_NAME/" run.env
+  #   sed -i "s/\(^DR_LOCAL_S3_PRETRAINED_CHECKPOINT=\)\(.*\)/\1best/" run.env
+
+  #   dr-increment-training -f
+  # fi
 
   if [ "${DR_DIRECTION}" == "CW" ]; then
     REVERSE_DIRECTION="True"
@@ -118,15 +120,15 @@ _autorun() {
     sed -i "s/\(^DR_TRAIN_REVERSE_DIRECTION=\)\(.*\)/\1$REVERSE_DIRECTION/" run.env
   fi
 
-  CUR_MODEL_NAME=$(grep -e '^DR_LOCAL_S3_MODEL_PREFIX=' ./run.env | cut -d'=' -f2 | tail -n 1)
+  # CUR_MODEL_NAME=$(grep -e '^DR_LOCAL_S3_MODEL_PREFIX=' ./run.env | cut -d'=' -f2 | tail -n 1)
 
-  CUR_MODEL_BASE=$(grep -e '^DR_MODEL_BASE=' ./run.env | cut -d'=' -f2 | tail -n 1)
-  if [ -z ${CUR_MODEL_BASE} ]; then
-    echo "" >>run.env
-    echo "DR_MODEL_BASE=${DR_MODEL_BASE}" >>run.env
-  else
-    sed -i "s/\(^DR_MODEL_BASE=\)\(.*\)/\1$DR_MODEL_BASE/" run.env
-  fi
+  # CUR_MODEL_BASE=$(grep -e '^DR_MODEL_BASE=' ./run.env | cut -d'=' -f2 | tail -n 1)
+  # if [ -z ${CUR_MODEL_BASE} ]; then
+  #   echo "" >>run.env
+  #   echo "DR_MODEL_BASE=${DR_MODEL_BASE}" >>run.env
+  # else
+  #   sed -i "s/\(^DR_MODEL_BASE=\)\(.*\)/\1$DR_MODEL_BASE/" run.env
+  # fi
 
   # image version
   RL_COACH=$(cat defaults/dependencies.json | jq .containers.rl_coach -r)
@@ -140,37 +142,37 @@ _autorun() {
   DR_S3_BUCKET_PREFIX=$(aws ssm get-parameter --name "${DR_SSM_PARAMETER_PREFIX}/s3_bucket_name_prefix" --with-decryption | jq .Parameter.Value -r)
   DR_LOCAL_S3_BUCKET="${DR_S3_BUCKET_PREFIX}-${ACCOUNT_ID}-train"
   DR_UPLOAD_S3_BUCKET="${DR_S3_BUCKET_PREFIX}-${ACCOUNT_ID}-eval"
-  DR_DOCKER_STYLE="compose"
   DR_SAGEMAKER_IMAGE="${SAGEMAKER}-gpu"
-  DR_ROBOMAKER_IMAGE="${ROBOMAKER}-cpu-avx2" # 5.0.1-gpu-gl
-  DR_COACH_IMAGE="${RL_COACH}"
-  DR_WORKERS="6"                  # 동시 실행 Worker 개수, 대충 4vCPU당 RoboMaker 1개 정도 수행 가능 + Sagemaker 4vCPU
-  DR_GUI_ENABLE="False"           # 활성화시 Worker Gagebo에 VNC로 GUI 접속 가능, PW 없음 => CPU 추가 사용하며,볼일이 없으므로 비활성 권장
-  DR_KINESIS_STREAM_ENABLE="True" # 활성화시 경기 합성 화면 제공 => CPU 추가 사용하지만, 보기편하므로 활성
-  DR_KINESIS_STREAM_NAME=""
-  CUDA_VISIBLE_DEVICES="0"
+  DR_ROBOMAKER_IMAGE="${ROBOMAKER}-gpu-gl" # 5.0.1-gpu-gl
+  # DR_DOCKER_STYLE="compose"
+  # DR_COACH_IMAGE="${RL_COACH}"
+  # DR_WORKERS="6"                  # 동시 실행 Worker 개수, 대충 4vCPU당 RoboMaker 1개 정도 수행 가능 + Sagemaker 4vCPU
+  # DR_GUI_ENABLE="False"           # 활성화시 Worker Gagebo에 VNC로 GUI 접속 가능, PW 없음 => CPU 추가 사용하며,볼일이 없으므로 비활성 권장
+  # DR_KINESIS_STREAM_ENABLE="True" # 활성화시 경기 합성 화면 제공 => CPU 추가 사용하지만, 보기편하므로 활성
+  # DR_KINESIS_STREAM_NAME=""
+  # CUDA_VISIBLE_DEVICES="0"
 
   sed -i "s/\(^DR_AWS_APP_REGION=\)\(.*\)/\1$DR_AWS_APP_REGION/" system.env
   sed -i "s/\(^DR_LOCAL_S3_PROFILE=\)\(.*\)/\1$DR_LOCAL_S3_PROFILE/" system.env
   sed -i "s/\(^DR_LOCAL_S3_BUCKET=\)\(.*\)/\1$DR_LOCAL_S3_BUCKET/" system.env
   sed -i "s/\(^DR_UPLOAD_S3_PROFILE=\)\(.*\)/\1$DR_UPLOAD_S3_PROFILE/" system.env
   sed -i "s/\(^DR_UPLOAD_S3_BUCKET=\)\(.*\)/\1$DR_UPLOAD_S3_BUCKET/" system.env
-  sed -i "s/\(^DR_DOCKER_STYLE=\)\(.*\)/\1$DR_DOCKER_STYLE/" system.env
   sed -i "s/\(^DR_SAGEMAKER_IMAGE=\)\(.*\)/\1$DR_SAGEMAKER_IMAGE/" system.env
   sed -i "s/\(^DR_ROBOMAKER_IMAGE=\)\(.*\)/\1$DR_ROBOMAKER_IMAGE/" system.env
-  sed -i "s/\(^DR_COACH_IMAGE=\)\(.*\)/\1$DR_COACH_IMAGE/" system.env
-  sed -i "s/\(^DR_WORKERS=\)\(.*\)/\1$DR_WORKERS/" system.env
-  sed -i "s/\(^DR_GUI_ENABLE=\)\(.*\)/\1$DR_GUI_ENABLE/" system.env
-  sed -i "s/\(^DR_KINESIS_STREAM_ENABLE=\)\(.*\)/\1$DR_KINESIS_STREAM_ENABLE/" system.env
-  sed -i "s/\(^DR_KINESIS_STREAM_NAME=\)\(.*\)/\1$DR_KINESIS_STREAM_NAME/" system.env
-  sed -i "s/\(^CUDA_VISIBLE_DEVICES=\)\(.*\)/\1$CUDA_VISIBLE_DEVICES/" system.env
+  # sed -i "s/\(^DR_DOCKER_STYLE=\)\(.*\)/\1$DR_DOCKER_STYLE/" system.env
+  # sed -i "s/\(^DR_COACH_IMAGE=\)\(.*\)/\1$DR_COACH_IMAGE/" system.env
+  # sed -i "s/\(^DR_WORKERS=\)\(.*\)/\1$DR_WORKERS/" system.env
+  # sed -i "s/\(^DR_GUI_ENABLE=\)\(.*\)/\1$DR_GUI_ENABLE/" system.env
+  # sed -i "s/\(^DR_KINESIS_STREAM_ENABLE=\)\(.*\)/\1$DR_KINESIS_STREAM_ENABLE/" system.env
+  # sed -i "s/\(^DR_KINESIS_STREAM_NAME=\)\(.*\)/\1$DR_KINESIS_STREAM_NAME/" system.env
+  # sed -i "s/\(^CUDA_VISIBLE_DEVICES=\)\(.*\)/\1$CUDA_VISIBLE_DEVICES/" system.env
 
-  DR_LOCAL_S3_PREFIX=$(grep -e '^DR_LOCAL_S3_PREFIX=' ./system.env | cut -d'=' -f2 | tail -n 1)
-  if [ -z ${DR_LOCAL_S3_PREFIX} ]; then
-    echo "" >>system.env
-    echo "DR_LOCAL_S3_PREFIX=dr-cloud-1" >>system.env
-    echo "DR_UPLOAD_S3_PREFIX=dr-cloud-1" >>system.env
-  fi
+  # DR_LOCAL_S3_PREFIX=$(grep -e '^DR_LOCAL_S3_PREFIX=' ./system.env | cut -d'=' -f2 | tail -n 1)
+  # if [ -z ${DR_LOCAL_S3_PREFIX} ]; then
+  #   echo "" >>system.env
+  #   echo "DR_LOCAL_S3_PREFIX=${DR_WORLD_NAME}" >>system.env
+  #   echo "DR_UPLOAD_S3_PREFIX=${DR_WORLD_NAME}" >>system.env
+  # fi
 
   # upload
   cat ./run.env >./custom_files/run.env
